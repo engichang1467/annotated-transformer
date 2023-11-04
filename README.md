@@ -17,6 +17,18 @@ Use `requirements.txt` to install library dependencies with pip:
 pip install -r requirements.txt
 ```
 
+# Dataset Setup
+
+For this tutorial, we will use the [Europarl v7 dataset](https://academictorrents.com/details/2c4dbfe50cda15026ebc2579b13edd532b10e911)
+
+Once you have downloaded the dataset, you can extract it by simply click on it.
+
+Here are the 2 files that we need:
+
+- `europarl-v7.de-en.en` - this is the English corpus  
+- `europarl-v7.de-en.de` - this is the German corpus
+
+Create a dataset directory (`datasets`) and move the two files into it.
 
 # Notebook Setup
 
