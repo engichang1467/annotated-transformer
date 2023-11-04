@@ -111,6 +111,7 @@ import os
 from os.path import exists
 import torch
 import torch.nn as nn
+from pathlib import Path
 from torch.nn.functional import log_softmax, pad
 import math
 import copy
@@ -1396,6 +1397,48 @@ def example_simple_model():
 # downloaded already
 
 
+""" Move to the directory containing the language datesets."""
+data_path = Path.cwd()
+
+# my_file_en = "europarl-v7.de-en.en"
+my_file_en = data_path.joinpath("datasets/europarl-v7.de-en.en")
+my_file_de = data_path.joinpath("datasets/europarl-v7.de-en.de")
+
+# May need to adjust these parameters for new translation tasks.
+size_train = 100000
+size_val = 4000
+size_test = 4000
+
+train = []
+val = []
+test = []
+
+de_list = []
+en_list = []
+
+count = 0
+with open(my_file_de, encoding="utf8") as fp:
+  for line in fp:
+    de_list.append(line)
+    if count >= (size_train + size_val + size_test - 1):
+      break
+    count += 1
+
+count = 0
+with open(my_file_en, encoding="utf8") as fp:
+  for line in fp:
+    en_list.append(line)
+    if count > (size_train + size_val + size_test - 1):
+      break
+    count += 1
+
+dataset = list(zip(de_list, en_list))
+train = dataset[:size_train]
+val = dataset[size_train:size_train+size_val]
+test = dataset[size_train+size_val:size_train+size_val+size_test]
+
+# print(len(train), len(val), len(test))
+
 def load_tokenizers():
 
     try:
@@ -1426,7 +1469,7 @@ def yield_tokens(data_iter, tokenizer, index):
 # %% id="jU3kVlV5okC-" tags=[]
 
 
-def build_vocabulary(spacy_de, spacy_en):
+def build_vocabulary(spacy_de, spacy_en, train, val, test):
     def tokenize_de(text):
         return tokenize(text, spacy_de)
 
@@ -1434,7 +1477,7 @@ def build_vocabulary(spacy_de, spacy_en):
         return tokenize(text, spacy_en)
 
     print("Building German Vocabulary ...")
-    train, val, test = datasets.Multi30k(language_pair=("de", "en"))
+    # train, val, test = datasets.Multi30k(language_pair=("de", "en"))
     vocab_src = build_vocab_from_iterator(
         yield_tokens(train + val + test, tokenize_de, index=0),
         min_freq=2,
@@ -1442,7 +1485,7 @@ def build_vocabulary(spacy_de, spacy_en):
     )
 
     print("Building English Vocabulary ...")
-    train, val, test = datasets.Multi30k(language_pair=("de", "en"))
+    # train, val, test = datasets.Multi30k(language_pair=("de", "en"))
     vocab_tgt = build_vocab_from_iterator(
         yield_tokens(train + val + test, tokenize_en, index=1),
         min_freq=2,
@@ -1457,7 +1500,7 @@ def build_vocabulary(spacy_de, spacy_en):
 
 def load_vocab(spacy_de, spacy_en):
     if not exists("vocab.pt"):
-        vocab_src, vocab_tgt = build_vocabulary(spacy_de, spacy_en)
+        vocab_src, vocab_tgt = build_vocabulary(spacy_de, spacy_en, train, val, test)
         torch.save((vocab_src, vocab_tgt), "vocab.pt")
     else:
         vocab_src, vocab_tgt = torch.load("vocab.pt")
@@ -1577,9 +1620,7 @@ def create_dataloaders(
             pad_id=vocab_src.get_stoi()["<blank>"],
         )
 
-    train_iter, valid_iter, test_iter = datasets.Multi30k(
-        language_pair=("de", "en")
-    )
+    train_iter, valid_iter, test_iter = train, val, test
 
     train_iter_map = to_map_style_dataset(
         train_iter
